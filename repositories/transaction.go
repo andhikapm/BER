@@ -14,8 +14,8 @@ type TransactionRepository interface {
 	DeleteTransaction(transaction models.Transaction) (models.Transaction, error)
 	CreateTransOrder(order []models.Order) ([]models.Order, error)
 	FindTransToppingId(ToppingID []int) ([]models.ToppingResponse, error)
-	FindTransProductId(ProductID int) (models.ProductResponse, error)
 	FindTransOrders(orderID int) (models.Order, error)
+	WhereTransOrder(ID int) ([]models.Order, error)
 	DeleteTransOrder(order []models.Order) ([]models.Order, error)
 	GetMyTransaction(ID int) ([]models.Transaction, error)
 }
@@ -54,7 +54,6 @@ func (r *repository) UpdateTransaction(transaction models.Transaction) (models.T
 }
 
 func (r *repository) DeleteTransaction(transaction models.Transaction) (models.Transaction, error) {
-	r.db.Model(&transaction).Association("Order").Clear()
 	err := r.db.Delete(&transaction).Error
 
 	return transaction, err
@@ -73,16 +72,17 @@ func (r *repository) FindTransToppingId(ToppingID []int) ([]models.ToppingRespon
 	return toppings, err
 }
 
-func (r *repository) FindTransProductId(ProductID int) (models.ProductResponse, error) {
-	var products models.ProductResponse
-	err := r.db.Find(&products, ProductID).Error
-
-	return products, err
-}
-
 func (r *repository) FindTransOrders(orderID int) (models.Order, error) {
 	var order models.Order
 	err := r.db.Preload("Product").Preload("Topping").First(&order, orderID).Error
+
+	return order, err
+}
+
+func (r *repository) WhereTransOrder(ID int) ([]models.Order, error) {
+	var order []models.Order
+	//db.Where("name = ?", "jinzhu").First(&user)
+	err := r.db.Preload("Product").Preload("Topping").Where("transaction_id = ?", ID).Find(&order).Error
 
 	return order, err
 }

@@ -16,6 +16,11 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type Data struct {
+	TransID int
+	OrderID []int
+}
+
 type handlerTransaction struct {
 	TransactionRepository repositories.TransactionRepository
 }
@@ -301,7 +306,29 @@ func (h *handlerTransaction) DeleteTransaction(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	data, err := h.TransactionRepository.DeleteTransaction(transaction)
+	order, err := h.TransactionRepository.WhereTransOrder(transaction.ID)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		response := dto.ErrorResult{Code: http.StatusBadRequest, Status: "failed", Message: err.Error()}
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	order, err = h.TransactionRepository.DeleteTransOrder(order)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		response := dto.ErrorResult{Code: http.StatusBadRequest, Status: "failed", Message: err.Error()}
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	var getID []int
+
+	for _, s := range order {
+		getID = append(getID, s.ID)
+	}
+
+	transaction, err = h.TransactionRepository.DeleteTransaction(transaction)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		response := dto.ErrorResult{Code: http.StatusInternalServerError, Status: "failed", Message: err.Error()}
@@ -309,10 +336,14 @@ func (h *handlerTransaction) DeleteTransaction(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	data := Data{
+		TransID: transaction.ID,
+		OrderID: getID,
+	}
 	//h.TransactionRepository.DeleteTransOrder(transaction.Order)
 
 	w.WriteHeader(http.StatusOK)
-	response := dto.SuccessResult{Code: http.StatusOK, Status: "success", Data: data.ID}
+	response := dto.SuccessResult{Code: http.StatusOK, Status: "success", Data: data}
 	json.NewEncoder(w).Encode(response)
 
 }
